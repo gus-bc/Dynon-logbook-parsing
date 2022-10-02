@@ -32,10 +32,9 @@ class Config:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+
 def csv_to_json(s):
     return json.dumps(list(csv.DictReader(s.splitlines(), delimiter=",")))
-
-
 
 
 def get_session_list(cfg) -> list:
@@ -99,35 +98,32 @@ def convert_userdatalog_csv_trip_log(cfg):
                 session_data = []
 
             data = generate_data_dict(cfg, csv_row)
-
+            # print(data)
             if data is None:
                 pass
             else:
+                # print(data)
                 session_data.append(data)
+                # print(session_data)
 
-            if session_list[session_index+1] == csv_row_index+1:
-                hobbs = session_data[-1]['Hobbs Time']
-                start_waypoint = check_waypoint(cfg,
-                                                session_data[0]['Latitude'],
-                                                session_data[0]['Longitude'])
-                end_waypoint = check_waypoint(cfg,
-                                              session_data[-1]['Latitude'],
-                                              session_data[-1]['Longitude'])
-                start_date_time = session_data[0]['GPS Date & Time']
-                end_date_time = session_data[-1]['GPS Date & Time']
-                session_log = f"{start_date_time}," \
-                              f"{end_date_time}," \
-                              f"{hobbs}," \
-                              f"{start_waypoint}," \
-                              f"{end_waypoint} \n"
+            if session_data:
+                if session_list[session_index+1] == csv_row_index+1:
+                    hobbs = session_data[-1]['Hobbs Time']
+                    start_waypoint = check_waypoint(cfg, session_data[0]['Latitude'], session_data[0]['Longitude'])
+                    end_waypoint = check_waypoint(cfg, session_data[-1]['Latitude'], session_data[-1]['Longitude'])
+                    start_date_time = session_data[0]['GPS Date & Time']
+                    end_date_time = session_data[-1]['GPS Date & Time']
+                    session_log = f"{start_date_time}," \
+                                  f"{end_date_time}," \
+                                  f"{hobbs}," \
+                                  f"{start_waypoint}," \
+                                  f"{end_waypoint} \n"
 
-                output.write(session_log)
+                    output.write(session_log)
+                    session_index += 1
 
+                csv_row_index += 1
 
-                session_index += 1
-
-
-            csv_row_index += 1
     if cfg.output_type == 'json':
         return csv_to_json(output.text)
     else:
@@ -141,9 +137,11 @@ def generate_data_dict(cfg, csv_row):
 
     # skip the row if these entries are blank
     if not fix_quality or not num_sats or not date_and_time:
+        # print("fix_quality and/or number of satelites was missing from data")
         return None
 
     # skip the row if the quality is low
+    # print("fix_quality and/or number of satelites was too low")
     if (int(fix_quality) < cfg.min_fix_quality) or (int(num_sats) < cfg.min_satellites):
         return None
 
@@ -155,6 +153,7 @@ def generate_data_dict(cfg, csv_row):
 
     # skip the row if any of these fields are missing
     if not lat or not lon or not alt or not hobbs or not time_date:
+        # print("File does not contain Latitude (deg), Longitude (deg), GPS Altitude (feet), Hobbs Time and/or GPS Date & Time information.")
         return None
 
     # convert altitude from feet to meters
@@ -187,9 +186,9 @@ def check_waypoint(cfg, lat, lon):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--user_data_log', type=str, required=True, help="Path to user_data_log")
-    parser.add_argument('--user_waypoints', type=str, required=True, help="Path to user_waypoints")
-    parser.add_argument('--output_type', type=str, required=True, help="Choose between 'csv' or 'json'")
+    parser.add_argument('-d', '--user_data_log', type=str, required=True, help="Path to user_data_log")
+    parser.add_argument('-w', '--user_waypoints', type=str, required=True, help="Path to user_waypoints")
+    parser.add_argument('-f', '--output_type', type=str, required=True, help="Choose between 'csv' or 'json'")
     args = parser.parse_args()
 
     csv_input_filename = args.user_data_log
@@ -216,5 +215,3 @@ if __name__ == '__main__':
 
     exit_code = main()
     sys.exit(exit_code)
-
-
